@@ -1,0 +1,40 @@
+#!/bin/zsh
+
+set -u
+unsetopt BG_NICE
+
+user_home="${HOME:?Не удалось определить домашнюю папку}"
+map8_root="$user_home/Library/Application Support/Map8"
+wine_app="$map8_root/runtime-11.14/Wine Staging.app"
+wine_bin="$wine_app/Contents/Resources/wine/bin/wine"
+game_exe="$map8_root/game/Map8.exe"
+prefix_dir="$map8_root/prefix"
+log_file="$map8_root/launch.log"
+
+show_error() {
+    /usr/bin/osascript -e "display dialog \"$1\" with title \"Map8\" buttons {\"OK\"} default button \"OK\" with icon stop" >/dev/null
+}
+
+if [[ ! -x "$wine_bin" ]]; then
+    show_error "Не найден бесплатный Wine. Запустите файл «Установить Map8.command» ещё раз."
+    exit 1
+fi
+
+if [[ ! -f "$game_exe" ]]; then
+    show_error "Не найдены файлы Map8. Запустите файл «Установить Map8.command» ещё раз."
+    exit 1
+fi
+
+if /usr/bin/pgrep -f '[M]ap8.exe' >/dev/null 2>&1; then
+    exit 0
+fi
+
+/bin/mkdir -p "$prefix_dir"
+cd "$map8_root/game" || exit 1
+
+/usr/bin/nohup /usr/bin/env \
+    WINEPREFIX="$prefix_dir" \
+    WINEDEBUG=-all \
+    "$wine_bin" "$game_exe" >>"$log_file" 2>&1 &
+
+exit 0
